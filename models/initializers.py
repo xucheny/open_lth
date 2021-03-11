@@ -5,6 +5,8 @@
 
 import torch
 
+from utils import qc_model_utils
+import functools
 
 def binary(w):
     if isinstance(w, torch.nn.Linear) or isinstance(w, torch.nn.Conv2d):
@@ -26,3 +28,10 @@ def kaiming_uniform(w):
 def orthogonal(w):
     if isinstance(w, torch.nn.Linear) or isinstance(w, torch.nn.Conv2d):
         torch.nn.init.orthogonal_(w.weight)
+
+##########################################################################
+def hva_normal(w, std=1e-1):
+    if isinstance(w, qc_model_utils.HamiltonianVariationalAnsatz):
+        torch.nn.init.normal_(w.params, mean=0, std=std)
+def hva_normal_10(w):
+    hva_normal(w, 10)

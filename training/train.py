@@ -16,7 +16,7 @@ import models.registry
 from platforms.platform import get_platform
 from training.checkpointing import restore_checkpoint
 from training import optimizers
-from training import standard_callbacks
+from training import standard_callbacks, lossonly_callbacks
 from training.metric_logger import MetricLogger
 
 try:
@@ -150,7 +150,12 @@ def standard_train(
 
     train_loader = datasets.registry.get(dataset_hparams, train=True)
     test_loader = datasets.registry.get(dataset_hparams, train=False)
-    callbacks = standard_callbacks.standard_callbacks(
-        training_hparams, train_loader, test_loader, start_step=start_step,
-        verbose=verbose, evaluate_every_epoch=evaluate_every_epoch)
+    if dataset_hparams.dataset_name == 'placeholder':
+        callbacks = lossonly_callbacks.lossonly_callbacks(
+            training_hparams, train_loader, test_loader, start_step=start_step,
+            verbose=verbose, evaluate_every_epoch=evaluate_every_epoch)
+    else:
+        callbacks = standard_callbacks.standard_callbacks(
+            training_hparams, train_loader, test_loader, start_step=start_step,
+            verbose=verbose, evaluate_every_epoch=evaluate_every_epoch)
     train(training_hparams, model, train_loader, output_location, callbacks, start_step=start_step)
