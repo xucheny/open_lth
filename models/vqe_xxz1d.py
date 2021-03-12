@@ -11,16 +11,16 @@ from lottery.desc import LotteryDesc
 from models import base
 from pruning import sparse_global
 
-from utils.qc_model_utils import Energy, PlaceholderLoss, HamiltonianVariationalAnsatz, get_tfim1d_setup
+from utils.qc_model_utils import Energy, PlaceholderLoss, HamiltonianVariationalAnsatz, get_xxz1d_setup
 
 
 class Model(base.Model):
     '''A torch model for Hamiltonian variational ansatz'''
 
-    def __init__(self, num_qubits, num_layers, g, initializer):
-        print('Model: vqe_tfim1d')
+    def __init__(self, num_qubits, num_layers, delta, initializer):
+        print('Model: vqe_xxz1d')
         super(Model, self).__init__()
-        parameterized_ops, observable, input_state = get_tfim1d_setup(num_qubits, g)
+        parameterized_ops, observable, input_state = get_xxz1d_setup(num_qubits, delta)
         self.ansatz = HamiltonianVariationalAnsatz(parameterized_ops, num_layers, input_state)
         self.energy_module = Energy(observable)
         self.criterion = PlaceholderLoss() # simply sum or mean, does not use the other input
@@ -55,7 +55,7 @@ class Model(base.Model):
                 return False
 
         return (
-                model_name.startswith('vqe_tfim1d') and
+                model_name.startswith('vqe_xxz1d') and
                 len(model_name.split('_')) == 5 and
                 all([x.isdigit() and int(x) > 0 for x in model_name.split('_')[2:4]]) and
                 all([isfloat(x) and float(x) > 0 for x in model_name.split('_')[4:]])
@@ -63,13 +63,12 @@ class Model(base.Model):
 
     @staticmethod
     def get_model_from_name(model_name, initializer, outputs=None):
-        """The name of a model is vqe_tfim1d_Nqubits_Nlayers_g
+        """The name of a model is vqe_xxz1d_Nqubits_Nlayers_delta
         Nqubits is the num of qubits in the system,
         Nlayers is the number of layers of the HVA,
-        g is the magnitude of the perturbation,
-        w1, w2, etc. are the reweighting factor of components in the hamiltonians
-        For example, a 3-qubit 10 layer TFIM1d model,
-        with observable ZZ + 0.1 X is 'vqe_tfim1d_3_10_0.1'.
+        delta is the magnitude of the ZZ term,
+        For example, a 4-qubit 10 layer xxz1d model,
+        with observable XX + YY + 0.5 * ZZ is 'vqe_xxz1d_4_10_0.5'.
         """
 
         outputs = outputs or 1
@@ -79,9 +78,9 @@ class Model(base.Model):
 
         num_qubits = int(model_name.split('_')[2])
         num_layers = int(model_name.split('_')[3])
-        g = float(model_name.split('_')[4])
+        delta = float(model_name.split('_')[4])
 
-        return Model(num_qubits, num_layers, g, initializer)
+        return Model(num_qubits, num_layers, delta, initializer)
 
     @property
     def loss_criterion(self):
@@ -90,7 +89,7 @@ class Model(base.Model):
     @staticmethod
     def default_hparams():
         model_hparams = hparams.ModelHparams(
-            model_name='vqe_tfim1d_8_100_0.9',
+            model_name='vqe_xxz1d_8_100_0.9',
             model_init='hva_normal',
             batchnorm_init='uniform' # Does not matter, we don't have module named 'BatchNorm2d'
         )

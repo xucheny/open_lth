@@ -5,7 +5,7 @@ from torch import nn
 _CTYPE=torch.cfloat
 _RTYPE=torch.float
 from utils.complex_linalg_utils import cmm, cexpj, expjm, batch_expjm, expectation
-from utils.numpy_gate_utils import tensor, _x, _z
+from utils.numpy_gate_utils import tensor, _x, _y, _z
 
 class Energy(nn.Module):
     def __init__(self, observable):
@@ -13,6 +13,7 @@ class Energy(nn.Module):
         self.register_buffer('ob', torch.tensor(observable, dtype=_CTYPE))
         vals, vecs = np.linalg.eigh(observable)
         self.optimal_value = vals[0]
+        print('minimum val: {}'.format(vals[0]))
 
     def forward(self, state):
         return expectation(state, self.ob) - self.optimal_value
@@ -64,9 +65,9 @@ class HamiltonianVariationalAnsatz(nn.Module):
                         )
         return state
 
-def get_TFIM_setup(num_qubits, g):
+def get_tfim1d_setup(num_qubits, g):
     dim = 2 ** num_qubits
-    ring_graph = [(i, i+1) for i in range(num_qubits - 1)]
+    ring_graph = [(i, i+1) for i in range(num_qubits - 1)] + [(num_qubits-1, 0)]
     Hzz = np.zeros((dim, dim), dtype=np.complex128)
     for edge in ring_graph:
         add_gate = [np.eye(2)] * num_qubits
@@ -80,9 +81,43 @@ def get_TFIM_setup(num_qubits, g):
         add_gate[i] = _x
         Hx = Hx + tensor(add_gate)
 
-    parameterized_ops = [Hx, Hzz]
+    parameterized_ops = [Hzz, Hx]
     observable = Hzz + g * Hx
-    input_state = tensor([np.array([1.0,0])] * num_qubits)
+    input_state = np.ones((dim,)) / np.sqrt(dim) #tensor([np.array([1.0,1.0]) / np.sqrt(2)] * num_qubits)
+    input_state = input_state.reshape(1,1,dim,1)
+
+    return parameterized_ops, observable, input_state
+
+def get_xxz1d_setup(num_qubits, delta):
+    assert num_qubits % 2 == 0, 'we only consider even num_qubits'
+
+    dim = 2 ** num_qubits
+
+    even_graph = [(i, (i+1) % num_qubits) for i in range(0, num_qubits, 2)]
+    odd_graph = [(i, (i+1) % num_qubits) for i in range(1, num_qubits, 2)]
+
+    def get_sum_two_qubits(num_qubits, gate, graph):
+        dim = 2 ** num_qubits
+        H = np.zeros((dim, dim), dtype=np.complex128)
+        for edge in graph:
+            add_gate = [np.eye(2)] * num_qubits
+            add_gate[edge[0]] = gate
+            add_gate[edge[1]] = gate
+            H = H + tensor(add_gate)
+        return H
+
+    Hzz_odd  = get_sum_two_qubits(num_qubits, _z, odd_graph)
+    Hyy_odd  = get_sum_two_qubits(num_qubits, _y, odd_graph)
+    Hxx_odd  = get_sum_two_qubits(num_qubits, _x, odd_graph)
+    Hzz_even  = get_sum_two_qubits(num_qubits, _z, even_graph)
+    Hyy_even  = get_sum_two_qubits(num_qubits, _y, even_graph)
+    Hxx_even  = get_sum_two_qubits(num_qubits, _x, even_graph)
+
+
+    parameterized_ops = [Hzz_odd, Hyy_odd, Hxx_odd, Hzz_even, Hyy_even, Hxx_even]
+    observable = Hxx_odd + Hxx_even + Hyy_odd + Hyy_even + delta * (Hzz_odd + Hzz_even)
+    two_qubit_state = np.array([ 0,  1, -1,  0]) / np.sqrt(2)
+    input_state = tensor([two_qubit_state] * (num_qubits // 2))
     input_state = input_state.reshape(1,1,dim,1)
 
     return parameterized_ops, observable, input_state

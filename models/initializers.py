@@ -33,5 +33,13 @@ def orthogonal(w):
 def hva_normal(w, std=1e-1):
     if isinstance(w, qc_model_utils.HamiltonianVariationalAnsatz):
         torch.nn.init.normal_(w.params, mean=0, std=std)
+def hva_normal_1(w):
+    hva_normal(w, 1)
 def hva_normal_10(w):
     hva_normal(w, 10)
+
+def hva_uniform(w, bound=10):
+    pass
+def hva_zeros(w):
+    if isinstance(w, qc_model_utils.HamiltonianVariationalAnsatz):
+        torch.nn.init.zeros_(w.params)
