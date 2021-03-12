@@ -40,7 +40,7 @@ class ComplexMatExp(autograd.Function):
 cexpj = ComplexExpJ.apply
 
 ##  For nightly build pytorch
-if torch.__version__ != '1.7.0':# and torch.__version__ != '1.7.1':
+if torch.__version__ != '1.7.0' and torch.__version__ != '1.7.1+cu110':
     #print('Using nightly build..')
     cmm = torch.matmul
     cexpj = lambda x: torch.exp(1j * x)
