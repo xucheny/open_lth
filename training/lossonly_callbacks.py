@@ -46,7 +46,7 @@ def create_loss_eval_callback(verbose=False):
 
         with torch.no_grad():
             output = model(None)
-            energy_gap = model.loss_criterion(output, None)
+            energy_gap = model.loss_criterion(output, None) / len(output)
 
         # Share the information if distributed.
         if get_platform().is_distributed:
@@ -56,7 +56,8 @@ def create_loss_eval_callback(verbose=False):
         energy_gap = energy_gap.cpu().item()
 
         if get_platform().is_primary_process:
-            logger.add('energy_gap', step, energy_gap)
+            for idx, output_entry in enumerate(output):
+                logger.add('gap_{}'.format(idx), step, output_entry)
 
             if verbose:
                 nonlocal time_of_last_call

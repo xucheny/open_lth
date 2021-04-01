@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from foundations import hparams
 from lottery.desc import LotteryDesc
 from models import base
-from pruning import sparse_global
+from pruning import sparse_global, parallel_sparse_global
 
 from utils.qc_model_utils import Energy, PlaceholderLoss, HamiltonianVariationalAnsatz, get_xxz1d_setup
 
@@ -21,7 +21,7 @@ class Model(base.Model):
         print('Model: vqe_xxz1d')
         super(Model, self).__init__()
         parameterized_ops, observable, input_state = get_xxz1d_setup(num_qubits, delta)
-        self.ansatz = HamiltonianVariationalAnsatz(parameterized_ops, num_layers, input_state)
+        self.ansatz = HamiltonianVariationalAnsatz(parameterized_ops, num_layers, input_state, 100)
         self.energy_module = Energy(observable)
         self.criterion = PlaceholderLoss() # simply sum or mean, does not use the other input
 
@@ -106,10 +106,10 @@ class Model(base.Model):
             training_steps='3000ep',
         )
 
-        pruning_hparams = sparse_global.PruningHparams(
-            pruning_strategy='sparse_global',
+        pruning_hparams = parallel_sparse_global.PruningHparams(
+            pruning_strategy='parallel_sparse_global',
             pruning_fraction=0.2,
-            pruning_layers_to_ignore='fc.weight', #TODO: what if we have nothing to ignore?
+            pruning_layers_to_ignore=None #TODO: what if we have nothing to ignore?
         )
 
         return LotteryDesc(model_hparams, dataset_hparams, training_hparams, pruning_hparams)

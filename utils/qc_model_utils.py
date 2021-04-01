@@ -38,10 +38,11 @@ class HamiltonianVariationalAnsatz(nn.Module):
     Here we restrict M = N = 1
     '''
 
-    def __init__(self, parameterized_ops, num_layers, input_state):
+    def __init__(self, parameterized_ops, num_layers, input_state, num_inits=1):
         super(HamiltonianVariationalAnsatz, self).__init__()
         self.num_layers = num_layers
         self.num_ops = len(parameterized_ops)
+        self.num_inits = num_inits
 
         # register parameterized ops
         for op_ind, op in enumerate(parameterized_ops):
@@ -52,7 +53,7 @@ class HamiltonianVariationalAnsatz(nn.Module):
         self.register_buffer('input', torch.tensor(input_state, dtype=_CTYPE))
 
         # register parameters
-        self.params = nn.Parameter(torch.Tensor(1, self.num_layers, self.num_ops))
+        self.params = nn.Parameter(torch.Tensor(num_inits, self.num_layers, self.num_ops))
 
 
     def forward(self):

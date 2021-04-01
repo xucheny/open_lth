@@ -7,9 +7,9 @@ import copy
 from functools import partial
 
 from foundations.hparams import PruningHparams
-from pruning import sparse_global
+from pruning import sparse_global, parallel_sparse_global
 
-registered_strategies = {'sparse_global': sparse_global.Strategy}
+registered_strategies = {'sparse_global': sparse_global.Strategy, 'parallel_sparse_global': parallel_sparse_global.Strategy}
 
 
 def get(pruning_hparams: PruningHparams):
